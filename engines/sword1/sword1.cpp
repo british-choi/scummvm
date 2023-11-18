@@ -49,6 +49,7 @@ SwordEngine::SwordEngine(OSystem *syst, const ADGameDescription *gameDesc)
 
 	_features = gameDesc->flags;
 	_systemVars.platform = gameDesc->platform;
+	_systemVars.realLanguage = gameDesc->language;
 
 	// Add default file directories
 	const Common::FSNode gameDataDir(ConfMan.get("path"));
@@ -95,7 +96,7 @@ Common::Error SwordEngine::init() {
 	checkCdFiles();
 
 	debug(5, "Starting resource manager");
-	_resMan = new ResMan("swordres.rif", _systemVars.platform == Common::kPlatformMacintosh);
+	_resMan = new ResMan("swordres.rif", _systemVars.platform == Common::kPlatformMacintosh, _systemVars.realLanguage == Common::KO_KOR);
 	debug(5, "Starting object manager");
 	_objectMan = new ObjectMan(_resMan);
 	_mouse = new Mouse(_system, _resMan, _objectMan);

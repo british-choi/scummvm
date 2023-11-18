@@ -62,7 +62,7 @@ struct Prj {
 
 class ResMan {
 public:
-	ResMan(const char *fileName, bool isMacFile);
+	ResMan(const char *fileName, bool isMacFile, bool isKorean);
 	~ResMan();
 	void flush();
 	void resClose(uint32 id);
@@ -124,6 +124,7 @@ private:
 	Clu *_openCluStart, *_openCluEnd;
 	int  _openClus;
 	bool _isBigEndian;
+	bool _isKorTrs;
 };
 
 } // End of namespace Sword1

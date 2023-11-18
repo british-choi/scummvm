@@ -107,8 +107,15 @@ void Text::makeTextSprite(uint8 slot, const uint8 *text, uint16 maxWidth, uint8 
 			textString = Common::convertBiDiString(textLogical, Common::kWindows1255);
 			curTextLine = (const uint8 *)textString.c_str();
 		}
-		for (uint16 pos = 0; pos < lines[lineCnt].length; pos++)
-			sprPtr += copyChar(*curTextLine++, sprPtr, sprWidth, pen) - OVERLAP;
+		for (uint16 pos = 0; pos < lines[lineCnt].length; pos++) {
+			if (isKoreanChar(*curTextLine, *(curTextLine+1))) {
+			    sprPtr += copyWChar(*curTextLine, *(curTextLine+1), sprPtr, sprWidth, pen) - OVERLAP;
+				curTextLine += 2;
+				pos++;
+			} else {
+			    sprPtr += copyChar(*curTextLine++, sprPtr, sprWidth, pen) - OVERLAP;
+			}
+		}
 		curTextLine++; // skip space at the end of the line
 		text += lines[lineCnt].length + 1;
 
@@ -125,6 +132,13 @@ uint16 Text::charWidth(uint8 ch) {
 	return _resMan->getUint16(_resMan->fetchFrame(_font, ch - SPACE)->width);
 }
 
+uint16 Text::wcharWidth(uint8 hi, uint8 lo) {
+	if (isKoreanChar(hi, lo)) {
+		return 20;	// fixed width : 20
+	}
+	return charWidth(hi) + charWidth(lo);
+}
+
 uint16 Text::analyzeSentence(const uint8 *text, uint16 maxWidth, LineInfo *line) {
 	uint16 lineNo = 0;
 
@@ -134,9 +148,15 @@ uint16 Text::analyzeSentence(const uint8 *text, uint16 maxWidth, LineInfo *line)
 		uint16 wordLength = 0;
 
 		while ((*text != SPACE) && *text) {
-			wordWidth += charWidth(*text) - OVERLAP;
-			wordLength++;
-			text++;
+			if (isKoreanChar(*text, *(text+1))) {
+				wordWidth += wcharWidth(*text, *(text+1)) - OVERLAP;
+				wordLength += 2;
+				text += 2;
+			} else {
+				wordWidth += charWidth(*text) - OVERLAP;
+				wordLength++;
+				text++;
+			}
 		}
 		if (*text == SPACE)
 			text++;
@@ -202,6 +222,30 @@ uint16 Text::copyChar(uint8 ch, uint8 *sprPtr, uint16 sprWidth, uint8 pen) {
 	return _resMan->getUint16(chFrame->width);
 }
 
+uint16 Text::copyWChar(uint8 hi, uint8 lo, uint8 *sprPtr, uint16 sprWidth, uint8 pen) {
+    if (!isKoreanChar(hi, lo)) {
+		return copyChar(hi, sprPtr, sprWidth, pen) + copyChar(lo, sprPtr, sprWidth, pen);
+	}
+
+	uint16 frameWidth = 20;
+	uint16 frameHeight = 26;
+	FrameHeader *chFrame = _resMan->fetchFrame(_font, 0xFF - SPACE);
+	uint8 *dest = sprPtr;
+	uint8 *decChr = ((uint8 *)chFrame) + sizeof(FrameHeader) + chFrame->width * chFrame->height + ((hi - 0xB0) * 94 + (lo - 0xA1)) * frameWidth * frameHeight;
+
+	for (uint16 cnty = 0; cnty < frameHeight; cnty++) {
+		for (uint16 cntx = 0; cntx < frameWidth; cntx++) {
+			if (*decChr == LETTER_COL)
+				dest[cntx] = pen;
+			else if (((*decChr == BORDER_COL) || (*decChr == BORDER_COL_PSX)) && (!dest[cntx])) // don't do a border if there's already a color underneath (chars can overlap)
+				dest[cntx] = BORDER_COL;
+			decChr++;
+		}
+		dest += sprWidth;
+	}
+	return frameWidth;
+}
+
 FrameHeader *Text::giveSpriteData(uint32 textTarget) {
 	// textTarget is the resource ID of the Compact linking the textdata.
 	// that's 0x950000 for slot 0 and 0x950001 for slot 1. easy, huh? :)
@@ -220,6 +264,14 @@ void Text::releaseText(uint32 id, bool updateCount) {
 		if (updateCount)
 			_textCount--;
 	}
+}
+
+bool Text::isKoreanChar(uint8 hi, uint8 lo) {
+	if (SwordEngine::_systemVars.realLanguage != Common::KO_KOR)
+		return false;
+	if (hi >= 0xB0 && hi <= 0xC8 && lo >= 0xA1 && lo <= 0xFE)
+		return true;
+	return false;
 }
 
 } // End of namespace Sword1
