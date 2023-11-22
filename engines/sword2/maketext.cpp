@@ -68,6 +68,9 @@ namespace Sword2 {
 #define DUD		64	// the first "chequered flag" (dud) symbol in
 				// our character set is in the '@' position
 
+#define KOREAN_CHAR_WIDTH	20
+#define KOREAN_CHAR_HEIGHT	26
+
 /**
  * This function creates a new text sprite. The sprite data contains a
  * FrameHeader, but not a standard file header.
@@ -145,8 +148,13 @@ uint16 FontRenderer::analyzeSentence(const byte *sentence, uint16 maxWidth, uint
 		ch = sentence[pos++];
 
 		while (ch && ch != SPACE) {
-			wordWidth += charWidth(ch, fontRes) + _charSpacing;
-			wordLength++;
+			if (isKoreanChar(ch, sentence[pos], fontRes)) {
+				wordWidth += wcharWidth(ch, sentence[pos++], fontRes) + _charSpacing;
+				wordLength += 2;
+			} else {
+				wordWidth += charWidth(ch, fontRes) + _charSpacing;
+				wordLength++;
+			}
 			ch = sentence[pos++];
 		}
 
@@ -282,12 +290,23 @@ byte *FontRenderer::buildTextSprite(const byte *sentence, uint32 fontRes, uint8 
 		// width minus the 'overlap'
 
 		for (uint j = 0; j < line[i].length; j++) {
-			byte *charPtr = findChar(*currTxtLine++, charSet);
+			byte *charPtr = NULL;
+			if (isKoreanChar(*currTxtLine, *(currTxtLine+1), fontRes)) {
+				charPtr = findWChar(*currTxtLine, *(currTxtLine+1), charSet);
+				currTxtLine += 2;
+				j++;
 
-			frame_head.read(charPtr);
+				frame_head.width = KOREAN_CHAR_WIDTH;
 
-			assert(frame_head.height == char_height);
-			copyChar(charPtr, spritePtr, spriteWidth, pen);
+				copyWChar(charPtr, spritePtr, spriteWidth, pen);
+			} else {
+				charPtr = findChar(*currTxtLine++, charSet);
+
+				frame_head.read(charPtr);
+
+				assert(frame_head.height == char_height);
+				copyChar(charPtr, spritePtr, spriteWidth, pen);
+			}
 
 			// We must remember to free memory for generated character in psx,
 			// as it is extracted differently than pc version (copyed from a
@@ -334,6 +353,20 @@ uint16 FontRenderer::charWidth(byte ch, uint32 fontRes) {
 	_vm->_resman->closeResource(fontRes);
 
 	return frame_head.width;
+}
+
+/**
+ * @param  hi      the KSX1001 code upper byte of the character
+ * @param  lo      the KSX1001 code lower byte of the character
+ * @param  fontRes the font resource id
+ * @return the width of the character
+ */
+
+uint16 FontRenderer::wcharWidth(byte hi, byte lo, uint32 fontRes) {
+	if (isKoreanChar(hi, lo, fontRes)) {
+		return KOREAN_CHAR_WIDTH;
+	}
+	return charWidth(hi, fontRes) + charWidth(lo, fontRes);
 }
 
 /**
@@ -445,6 +478,17 @@ byte *FontRenderer::findChar(byte ch, byte *charSet) {
 	}
 }
 
+byte *FontRenderer::findWChar(byte hi, byte lo, byte *charSet) {
+	uint16 frameWidth = KOREAN_CHAR_WIDTH;
+	uint16 frameHeight = KOREAN_CHAR_HEIGHT;
+	FrameHeader frame_head;
+	byte *charPtr = findChar(0xFF, charSet);
+
+	frame_head.read(charPtr);
+
+	return charPtr + frame_head.size() + frame_head.width * frame_head.height + ((hi - 0xB0) * 94 + (lo - 0xA1)) * frameWidth * frameHeight;
+}
+
 /**
  * Copies a character sprite to the sprite buffer.
  * @param charPtr     pointer to the character sprite
@@ -499,6 +543,71 @@ void FontRenderer::copyChar(byte *charPtr, byte *spritePtr, uint16 spriteWidth, 
 		}
 		rowPtr += spriteWidth;
 	}
+}
+
+/**
+ * Copies a wide character sprite to the sprite buffer.
+ * @param charPtr     pointer to the character sprite
+ * @param spritePtr   pointer to the sprite buffer
+ * @param spriteWidth the width of the character
+ * @param pen         If zero, copy the data directly. Otherwise remap the
+ *                    sprite's colors from BORDER_COL to _borderPen and from
+ *                    LETTER_COL to pen.
+ */
+
+void FontRenderer::copyWChar(byte *charPtr, byte *spritePtr, uint16 spriteWidth, uint8 pen) {
+	FrameHeader frame;
+
+	frame.width = KOREAN_CHAR_WIDTH;
+	frame.height = KOREAN_CHAR_HEIGHT;
+
+	byte *source = charPtr;
+	byte *rowPtr = spritePtr;
+
+	for (uint i = 0; i < frame.height; i++) {
+		byte *dest = rowPtr;
+
+		if (pen) {
+			// Use the specified colors
+			for (uint j = 0; j < frame.width; j++) {
+				switch (*source++) {
+				case 0:
+					// Do nothing if source pixel is zero,
+					// ie. transparent
+					break;
+				case LETTER_COL_PSX1: // Values for colored zone
+				case LETTER_COL_PSX2:
+				case LETTER_COL:
+					*dest = pen;
+					break;
+				case BORDER_COL:
+				default:
+					// Don't do a border pixel if there's
+					// already a bit of another character
+					// underneath (for overlapping!)
+					if (!*dest)
+						*dest = _borderPen;
+					break;
+				}
+				dest++;
+			}
+		} else {
+			// Pen is zero, so just copy character sprites
+			// directly into text sprite without remapping colors.
+			// Apparently overlapping is never considered here?
+			memcpy(dest, source, frame.width);
+			source += frame.width;
+		}
+		rowPtr += spriteWidth;
+	}
+}
+
+bool FontRenderer::isKoreanChar(byte hi, byte lo, uint32 fontRes) {
+	if (!_vm->_isKorTrs || fontRes != ENGLISH_SPEECH_FONT_ID)
+		return false;
+	if (hi >= 0xB0 && hi <= 0xC8 && lo >= 0xA1 && lo <= 0xFE)
+		return true;
+	return false;
 }
 
 // Distance to keep speech text from edges of screen

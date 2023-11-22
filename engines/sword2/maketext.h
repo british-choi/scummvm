@@ -94,9 +94,13 @@ private:
 	uint16 analyzeSentence(const byte *sentence, uint16 maxWidth, uint32 fontRes, LineInfo *line);
 	byte *buildTextSprite(const byte *sentence, uint32 fontRes, uint8 pen, LineInfo *line, uint16 noOfLines);
 	uint16 charWidth(byte ch, uint32 fontRes);
+	uint16 wcharWidth(byte hi, byte lo, uint32 fontRes);
 	uint16 charHeight(uint32 fontRes);
 	byte *findChar(byte ch, byte *charSet);
+	byte *findWChar(byte hi, byte lo, byte *charSet);
 	void copyChar(byte *charPtr, byte *spritePtr, uint16 spriteWidth, uint8 pen);
+	void copyWChar(byte *charPtr, byte *spritePtr, uint16 spriteWidth, uint8 pen);
+	bool isKoreanChar(byte hi, byte lo, uint32 fontRes);
 
 public:
 	FontRenderer(Sword2Engine *vm) : _vm(vm) {
