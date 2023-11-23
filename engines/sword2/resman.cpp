@@ -230,9 +230,9 @@ bool ResourceManager::init() {
 				return false;
 			}
 
-			// Use Korean.trs instead of TEXT.CLU
+			// Use korean.clu instead of TEXT.CLU
 			if (_vm->_isKorTrs && !scumm_stricmp(_resFiles[i].fileName, "TEXT.CLU"))
-				strcpy_s(_resFiles[i].fileName, 20, "korean.trs");
+				strcpy_s(_resFiles[i].fileName, 20, "korean.clu");
 			_resFiles[i].cd = cdInf[j].cd;
 		}
 	}
