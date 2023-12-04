@@ -45,6 +45,7 @@ public:
 
 
 	const Common::String &getFilename() const { return _filename; }
+	void setFilename(Common::String filename) {_filename = filename;}
 	virtual int32 getKernedHeight() const { return _kernedHeight; }
 	virtual int32 getBaseOffsetY() const { return _baseOffsetY; }
 	virtual int32 getCharBitmapWidth(unsigned char c) const { return _charHeaders[getCharIndex(c)].bitmapWidth; }
@@ -66,7 +67,11 @@ public:
 	void setUserData(void *data) { _userData = data; }
 
 	void saveState(SaveGame *state) const;
-	void restoreState(SaveGame *state);
+	virtual void restoreState(SaveGame *state);
+
+	// for Korean Translate
+	virtual int32 getWCharKernedWidth(unsigned char hi, unsigned char lo) const { return getCharKernedWidth(hi) + getCharKernedWidth(lo); }
+	bool isKoreanChar(unsigned char hi, unsigned char lo) const { return (hi >= 0xB0 && hi <= 0xC8 && lo >= 0xA1 && lo <= 0xFE); }
 
 	static const uint8 emerFont[][13];
 private:
@@ -100,7 +105,11 @@ public:
 	int32 getBaseOffsetY() const override { return 0; }
 	int32 getCharKernedWidth(unsigned char c) const override { return _font->getCharWidth(c); }
 
-	int getKernedStringLength(const Common::String &text) const override { return _font->getStringWidth(text); }
+	int getKernedStringLength(const Common::String &text) const override;
+
+	// for Korean Translate
+	int32 getWCharKernedWidth(unsigned char hi, unsigned char lo) const { return _font->getCharWidth(Common::convertUHCToUCS(hi, lo)); }
+	void restoreState(SaveGame *state);
 
 	Graphics::Font *_font;
 };

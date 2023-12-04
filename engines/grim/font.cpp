@@ -164,9 +164,72 @@ void Font::restoreState(SaveGame *state) {
 void FontTTF::loadTTF(const Common::String &filename, Common::SeekableReadStream *data, int size) {
 #ifdef USE_FREETYPE2
 	_font = Graphics::loadTTFFont(*data, size);
+	setFilename(filename);
 #else
 	_font = nullptr;
 #endif
+}
+
+int FontTTF::getKernedStringLength(const Common::String &text) const {
+	int result = 0;
+	for (uint32 i = 0; i < text.size(); ++i) {
+		if (i < text.size()-1 && isKoreanChar(text[i], text[i+1])) {
+			result += getWCharKernedWidth(text[i], text[i+1]);
+			++i;
+		} else {
+			result += getCharKernedWidth(text[i]);
+		}
+	}
+	return result;
+}
+
+void FontTTF::restoreState(SaveGame *state) {
+	Common::String fname = state->readString();
+	Common::SeekableReadStream *stream;
+
+	g_driver->destroyFont(this);
+
+	if (g_grim->getGameType() == GType_GRIM && g_grim->isRemastered()) {
+		Common::String name = "FontsHD/" + fname + ".txt";
+		stream = g_resourceloader->openNewStreamFile(name, true);
+		if (stream) {
+			Common::String line = stream->readLine();
+			Common::String font;
+			Common::String size;
+			for (uint i = 0; i < line.size(); ++i) {
+				if (line[i] == ' ') {
+					font = "FontsHD/" + Common::String(line.c_str(), i);
+					size = Common::String(line.c_str() + i + 1, line.size() - i - 2);
+				}
+			}
+
+			int s = atoi(size.c_str());
+			delete stream;
+			stream = g_resourceloader->openNewStreamFile(font.c_str(), true);
+			loadTTF(fname, stream, s);
+			return;
+		}
+	} else if (g_grim->getGameType() == GType_GRIM && g_grim->getGameLanguage() == Common::KO_KOR) {
+		Common::String name = fname + ".txt";
+		stream = g_resourceloader->openNewStreamFile(name, true);
+		if (stream) {
+			Common::String line = stream->readLine();
+			Common::String font;
+			Common::String size;
+			for (uint i = 0; i < line.size(); ++i) {
+				if (line[i] == ' ') {
+					font = Common::String(line.c_str(), i);
+					size = Common::String(line.c_str() + i + 1, line.size() - i - 2);
+				}
+			}
+
+			int s = atoi(size.c_str());
+			delete stream;
+			stream = g_resourceloader->openNewStreamFile(font.c_str(), true);
+			loadTTF(fname, stream, s);
+			return;
+		}
+	}
 }
 
 // Hardcoded default font for FPS, GUI, etc

@@ -1384,7 +1384,8 @@ struct TextObjectUserData {
 };
 
 void GfxOpenGL::createTextObject(TextObject *text) {
-	if (g_grim->getGameType() != GType_GRIM || !g_grim->isRemastered())
+	if ((g_grim->getGameType() != GType_GRIM || !g_grim->isRemastered()) 
+		&& (g_grim->getGameType() != GType_GRIM || g_grim->getGameLanguage() != Common::KO_KOR))
 		return;
 
 #ifdef USE_FREETYPE2
@@ -1399,10 +1400,17 @@ void GfxOpenGL::createTextObject(TextObject *text) {
 	for (int i = 0; i < numLines; i++) {
 		Graphics::Surface surface;
 
-		int width = gf->getStringWidth(text->getLines()[i]);
-		int height = width;
+		int width, height;
+		if (g_grim->getGameLanguage() == Common::KO_KOR) 
+			width = gf->getStringWidth(convertToU32String(text->getLines()[i].c_str(), Common::kWindows949));
+		else
+			width = gf->getStringWidth(text->getLines()[i]);
+		height = gf->getFontHeight();
 		surface.create(width, height, Graphics::PixelFormat(4, 8, 8, 8, 8, 0, 8, 16, 24));
-		gf->drawString(&surface, text->getLines()[i], 0, 0, width, 0xFFFFFFFF);
+		if (g_grim->getGameLanguage() == Common::KO_KOR) 
+			gf->drawString(&surface, convertToU32String(text->getLines()[i].c_str(), Common::kWindows949), 0, 0, width, 0xFFFFFFFF);
+		else 
+			gf->drawString(&surface, text->getLines()[i], 0, 0, width, 0xFFFFFFFF);
 
 		byte *bitmap = (byte *)surface.getPixels();
 
@@ -1447,7 +1455,8 @@ void GfxOpenGL::drawTextObject(const TextObject *text) {
 	glColor3ub(color.getRed(), color.getGreen(), color.getBlue());
 	const FontUserData *userData = (const FontUserData *)font->getUserData();
 	if (!userData) {
-		if (g_grim->getGameType() != GType_GRIM || !g_grim->isRemastered())
+		if ((g_grim->getGameType() != GType_GRIM || !g_grim->isRemastered()) 
+			&& (g_grim->getGameType() != GType_GRIM || g_grim->getGameLanguage() != Common::KO_KOR))
 			error("Could not get font userdata");
 #ifdef USE_FREETYPE2
 		const FontTTF *f = static_cast<const FontTTF *>(font);
@@ -1458,11 +1467,15 @@ void GfxOpenGL::drawTextObject(const TextObject *text) {
 
 		int numLines = text->getNumLines();
 		for (int i = 0; i < numLines; ++i) {
-			float width = gf->getStringWidth(text->getLines()[i]);
-			float height = width;
 			float x = text->getLineX(i);
 
 			float y = text->getLineY(i);
+			float width, height;
+			if (g_grim->getGameLanguage() == Common::KO_KOR) 
+				width = gf->getStringWidth(convertToU32String(text->getLines()[i].c_str(), Common::kWindows949));
+			else
+				width = gf->getStringWidth(text->getLines()[i]);
+			height = gf->getFontHeight();
 
 			if (text->getCoords() == 2 || text->getCoords() == 1) {
 				x *= _globalScaleW;
@@ -1547,7 +1560,8 @@ void GfxOpenGL::drawTextObject(const TextObject *text) {
 }
 
 void GfxOpenGL::destroyTextObject(TextObject *text) {
-	if (g_grim->getGameType() != GType_GRIM || !g_grim->isRemastered())
+	if ((g_grim->getGameType() != GType_GRIM || !g_grim->isRemastered()) 
+		&& (g_grim->getGameType() != GType_GRIM || g_grim->getGameLanguage() != Common::KO_KOR))
 		return;
 
 	TextObjectUserData *ud = (TextObjectUserData *)const_cast<void *>(text->getUserData());
