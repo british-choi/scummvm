@@ -14,6 +14,7 @@ win32-data: all
 	mkdir -p $(WIN32PATH)/doc/es
 	mkdir -p $(WIN32PATH)/doc/fr
 	mkdir -p $(WIN32PATH)/doc/it
+	mkdir -p $(WIN32PATH)/doc/ko
 	mkdir -p $(WIN32PATH)/doc/no-nb
 	mkdir -p $(WIN32PATH)/doc/se
 	$(STRIP) $(EXECUTABLE) -o $(WIN32PATH)/$(EXECUTABLE)
@@ -34,7 +35,7 @@ win32-data: all
 	cp $(srcdir)/doc/es/InicioRapido $(WIN32PATH)/doc/es/InicioRapido.txt
 	cp $(srcdir)/doc/fr/DemarrageRapide $(WIN32PATH)/doc/fr/DemarrageRapide.txt
 	cp $(srcdir)/doc/it/GuidaRapida $(WIN32PATH)/doc/it/GuidaRapida.txt
-	cp $(srcdir)/doc/ko/½ÃÀÛÇÏ±â $(WIN32PATH)/doc/ko/½ÃÀÛÇÏ±â.txt
+	cp $(srcdir)/doc/ko/ì‹œìž‘í•˜ê¸° $(WIN32PATH)/doc/ko/ì‹œìž‘í•˜ê¸°.txt
 	cp $(srcdir)/doc/no-nb/HurtigStart $(WIN32PATH)/doc/no-nb/HurtigStart.txt
 	cp $(srcdir)/doc/da/HurtigStart $(WIN32PATH)/doc/da/HurtigStart.txt
 	cp $(srcdir)/doc/de/Schnellstart $(WIN32PATH)/doc/de/Schnellstart.txt
